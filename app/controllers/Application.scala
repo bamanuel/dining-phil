@@ -21,14 +21,14 @@ import akka.util.duration._
 object Application extends Controller {
   
 	def index = Action {
-		/*val data = Dining.runDinings
-		val dataContent:Enumerator[String] = Enumerator.fromCallback(data)
+		//val data = Dining.runDinings
+		val dataContent:Enumerator[String] = Enumerator.fromCallback(data._2, () => println("Iterator done"))
 		//for(i <- dataContent){println(i)}
 		//Iteratee.foreach[Array[Byte]](msg => println(new String(msg)))
 
 		//Ok.stream(dataContent.andThen(Enumerator.eof) &> Comet(callback = "console.log"))
-		Ok.stream(dataContent.andThen(Enumerator.eof))*/
-		Ok("test")
+		Ok.stream(dataContent)
+		//Ok("test")
 	}
 	
 	def start = Action {
@@ -43,8 +43,8 @@ object Application extends Controller {
 	val data = Dining.runDinings
 	def act = Action { implicit request =>
 		val timeout = Timeout(10 seconds)
-		val result = Await.result(data().mapTo[List[String]], timeout.duration)//.asInstanceOf[Strings]
-		println(result) 
+		val result = Await.result(data._1.mapTo[List[String]], timeout.duration)//.asInstanceOf[Strings]
+		//println(result) 
 
 		// to get a Blah object from request content
 		val blah = json.Json.toJson(result).as[List[String]]

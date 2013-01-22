@@ -48,9 +48,10 @@ class Philosopher(name: String, left: ActorRef, right: ActorRef, restaurant: Act
 
 		case Think =>
 			context.become(thinking)
-		    restaurant ! name + " is thinking."
+		    restaurant ! name + " is thinking.  Done eating."
 		    left ! Put
 		    right ! Put
+		    self ! Eat
 	}
 
 	def waitingfor(chopstick: ActorRef, otherstick: ActorRef):Receive = {
@@ -111,12 +112,12 @@ class Restaurant extends Actor {
 	def mainStream:Receive = {
 		case Dump =>
 			val data:List[String] = messages.reverse
-			//println(new String(data))
+			println("Dump Request: "+sender)
 			sender ! data
 			messages = List()//empty list
 			//actorStream |>> Iteratee.forEach[String](s => println(s))
 		case msg:String =>
-			println(msg)
+			//println(msg)
 			messages = msg+"\r\n" :: messages
 	}
 	def toHexString(bytes:Array[Byte]) : String = {
@@ -147,13 +148,12 @@ object Dining {
 		val result = Await.result(future.mapTo[Option[String]], timeout.duration)//.asInstanceOf[Strings]
 		println(result)*/
 
-		val actorStream = { () =>
-
-			val pool = Executors.newCachedThreadPool() 
-    implicit val ec = ExecutionContext.fromExecutorService(pool) 
+		val actorStream = {
+			/*val pool = Executors.newCachedThreadPool() 
+    		implicit val ec = ExecutionContext.fromExecutorService(pool) 
 			val test = Future {
 			  List(" future!", "abd", "123")
-			}
+			}*/
 			//Promise.timeout(Some(restarant ? Dump), 100 milliseconds)
 			//println("received request")
 			implicit val timeout = Timeout(20 seconds)
@@ -161,9 +161,33 @@ object Dining {
 			//println(Await.result(future, timeout.duration))
 			future.mapTo[List[String]]//.asPromise
 			//return new Promise(new String(), 100);
-			test.mapTo[List[String]]
+			//test.mapTo[List[String]]
 		}
-		actorStream
+
+		def actorStream_helper = {
+
+			/*val pool = Executors.newCachedThreadPool() 
+    		implicit val ec = ExecutionContext.fromExecutorService(pool) 
+			val test = Future {
+			  	Some((new java.util.Date()).toString)
+			}*/
+			//Promise.timeout(Some(restarant ? Dump), 100 milliseconds)
+			//println("received request")
+			//implicit val timeout = Timeout(200 seconds)
+			val future = (restaurant ? Dump)(5 seconds).asInstanceOf[Future[List[String]]]
+			//println(Await.result(future, timeout.duration))
+			future onComplete {
+			  case _ => "Completed"
+			  //case Failure(t) => println("An error has occured: " + t.getMessage)
+			}
+			future.map[Option[String]](f => Some(f.mkString)).asPromise
+			//return new Promise(new String(), 100);
+			//test.mapTo[List[String]]
+			//test.asPromise
+
+		}
+		val actorStream2 = () => actorStream_helper
+		(actorStream, actorStream2)
 	}
 
 	def stopDining = {
